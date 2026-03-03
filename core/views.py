@@ -24,26 +24,20 @@ User = get_user_model()
 API_KEY = settings.MOVIE_API_KEY
 
 
+import requests
+
 def request_data(url):
     try:
-        try:
-            response = requests.get(url,
-                                    timeout=5,
-                                    headers={'Content-Type': 'application/json'})
-        except requests.Timeout:
-            response = None
-        if not response or response.status_code != 200:
-            response = requests.get(url,
-                                    timeout=5,
-                                    headers={'Content-Type': 'application/json'})
-            if response.status_code != 200:
-                return None
-    except (ConnectionError, requests.Timeout):
-        return None
+        response = requests.get(
+            url,
+            timeout=5
+        )
+        response.raise_for_status()  # raises error if status != 200
+        return response.json()
 
-    results = response.json()
-
-    return results
+    except requests.exceptions.RequestException as e:
+        print("TMDB API Error:", e)
+        return {}   # return empty dict instead of None
 
 
 def get_movie_cast(movie_id: int):
@@ -55,37 +49,43 @@ def get_movie_cast(movie_id: int):
 def get_similar_movie(movie_id: int):
     url = "https://api.themoviedb.org/3/movie/"+movie_id + \
         "/similar?api_key="+API_KEY+"&language=en-US&page=1"
-    return request_data(url)['results']
+    
+    data = request_data(url)
+    return data.get('results', [])
+
 
 
 def get_popular():
     url = "https://api.themoviedb.org/3/movie/popular?api_key="+API_KEY + \
         "&language=en-US&page=1&append_to_response=videos"
-    return request_data(url)['results']
+    data = request_data(url)
+    return data.get('results', [])
 
 
 def get_top_rated():
     url = "https://api.themoviedb.org/3/movie/top_rated?api_key="+API_KEY + \
         "&language=en-US&page=1&append_to_response=videos"
-    return request_data(url)['results']
-
+    data = request_data(url)
+    return data.get('results', [])
 
 def get_upcoming():
     url = "https://api.themoviedb.org/3/movie/upcoming?api_key="+API_KEY + \
         "&language=en-US&page=1&append_to_response=videos"
-    return request_data(url)['results']
+    data = request_data(url)
+    return data.get('results', [])
 
 
 def get_trending():
     url = "https://api.themoviedb.org/3/trending/movie/day?api_key="+API_KEY
-    return request_data(url)['results']
+    data = request_data(url)
+    return data.get('results', [])
 
 
 def get_latest_tv_series(page=1):
     url = "https://api.themoviedb.org/3/tv/on_the_air?api_key=" + \
         API_KEY+"&language=en-US&page="+str(page)
-    results = request_data(url)['results']
-    return results
+    data = request_data(url)
+    return data.get('results', [])
 
 
 def get_movie_detail(movie_id: str):
@@ -109,32 +109,42 @@ def get_tv_series_cast(tv_id):
 def get_tv_series_similar(tv_id):
     url = "https://api.themoviedb.org/3/tv/"+str(tv_id) + \
         "/similar?api_key="+API_KEY+"&language=en-US&page=1"
-    return request_data(url)['results']
+    data = request_data(url)
+    return data.get('results', [])
 
 
 def get_movie_with_genre(genre_id):
     url = "https://api.themoviedb.org/3/discover/movie?api_key=" + \
         API_KEY + "&with_genres=" + str(genre_id)
-    return request_data(url)['results']
+    data = request_data(url)
+    return data.get('results', [])
 
 
 def get_show_with_genre(genre_id):
     url = "https://api.themoviedb.org/3/discover/tv?api_key=" + \
         API_KEY + "&with_genres=" + str(genre_id)
-    return request_data(url)['results']
+    data = request_data(url)
+    return data.get('results', [])
 
 
 def get_popular_tv_series():
     url = "https://api.themoviedb.org/3/tv/popular?api_key=" + \
         API_KEY + "&&language=en-US&page=1"
-    return request_data(url)['results']
+    data = request_data(url)
+    return data.get('results', [])
 
 
 def get_top_rated_tv_series():
     url = "https://api.themoviedb.org/3/tv/top_rated?api_key=" + \
         API_KEY + "&language=en-US"
-    return request_data(url)['results']
+    data = request_data(url)
+    return data.get('results', [])
 
+from critiQs.utils import get_genres
+
+def home(request):
+    genres = get_genres()
+    return render(request, "home.html", {"genres": genres})
 
 class Home(TemplateView):
     template_name = 'home.html'
@@ -154,7 +164,7 @@ class Home(TemplateView):
         latest_tv_series = get_latest_tv_series()
         kwargs['latest_tv_series'] = latest_tv_series[:12]
 
-        kwargs['genres'] = settings.GENERES
+        kwargs['genres'] = get_genres()
         return super().get_context_data(**kwargs)
 
 
@@ -190,7 +200,7 @@ class MovieDetailView(ContentDetailView):
         comments = Comment.objects.filter(content_id=movie_id).order_by('-date_created')
         kwargs['comments'] = comments
 
-        kwargs['genres'] = settings.GENERES
+        kwargs['genres'] = get_genres()
         kwargs['credits'] = get_movie_cast(movie_id)
         kwargs['similar'] = get_similar_movie(movie_id)[:18]
 
@@ -207,7 +217,7 @@ class TvSeriesDetailView(ContentDetailView):
         comments = Comment.objects.filter(content_id=series_id)
         kwargs['comments'] = comments
 
-        kwargs['genres'] = settings.GENERES
+        kwargs['genres'] = get_genres()
         kwargs['credits'] = get_tv_series_cast(series_id)
         kwargs['similar'] = get_tv_series_similar(series_id)[:18]
 
@@ -220,7 +230,7 @@ class SignUpView(CreateView):
     template_name = "registration/signup.html"
 
     def get_context_data(self, *args, **kwargs):
-        kwargs['genres'] = settings.GENERES
+        kwargs['genres'] = get_genres()
         return super().get_context_data(**kwargs)
 
 
@@ -231,7 +241,7 @@ class GenresContentView(TemplateView):
         content_id = str(self.kwargs['genre_id'])
         kwargs["content"] = get_movie_with_genre(content_id)
         kwargs["title"] = self.kwargs['genre_name']
-        kwargs['genres'] = settings.GENERES
+        kwargs['genres'] = get_genres()
         return super().get_context_data(**kwargs)
 
 
@@ -249,7 +259,7 @@ class AllMovieView(TemplateView):
         # content = random.shuffle(movie_list)
 
         kwargs['content'] = movie_list
-        kwargs['genres'] = settings.GENERES
+        kwargs['genres'] = get_genres()
 
         return super().get_context_data(**kwargs)
 
@@ -266,6 +276,6 @@ class AllSeriesView(TemplateView):
         content = latest + top_rated + popular
 
         kwargs['content'] = content
-        kwargs['genres'] = settings.GENERES
+        kwargs['genres'] = get_genres()
 
         return super().get_context_data(**kwargs)

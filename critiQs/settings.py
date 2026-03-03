@@ -27,7 +27,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-!zo8mda$3j1l@ij!b1b#n&2#)mu02^-(y8u(b(v-qis(*3mql-"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
@@ -94,7 +94,7 @@ WSGI_APPLICATION = "critiQs.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
-DATABASES = {
+'''DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': os.getenv('DB_NAME'),
@@ -104,14 +104,14 @@ DATABASES = {
         'PORT': os.getenv('DB_PORT'),
         'OPTIONS': {'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"},
     }
-}
+}'''
 
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.sqlite3",
-#         "NAME": BASE_DIR / "db.sqlite3",
-#     }
-# }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
@@ -191,9 +191,7 @@ CORS_ORIGIN_ALLOW_ALL = True
 
 CORS_ALLOW_CREDENTIALS = True
 
-GENERES = requests.get("https://api.themoviedb.org/3/genre/movie/list?api_key=2047301ce07f8b38d14b386373e7a94d&language=en-US",
-                       timeout=5,
-                       headers={'Content-Type': 'application/json'}).json()['genres']
+
 
 
 MOVIE_API_KEY = 'f6792b478e6716a30e6af1fb17c30419'              # Aditya's API key
